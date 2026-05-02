@@ -10,7 +10,13 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
-
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ReplicateAction;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
 
 class PostsTable
 {
@@ -18,22 +24,70 @@ class PostsTable
     {
         return $table
             ->columns([
-                TextColumn::make('title'),
-                TextColumn::make('slug'),
-                TextColumn::make('category.name'),
+                TextColumn::make('id')
+                    ->label('ID')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('title')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('slug')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('category.name')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
                 ColorColumn::make('color'),
                 ImageColumn::make('image')
                     ->disk('public'),
+
+                TextColumn::make('created_at')
+                    ->label('Created At')
+                    ->dateTime()
+                    ->sortable(),
+                TextColumn::make('tags')
+                    ->label('Tags')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('published')
                     ->boolean(),
+            ])->defaultSort('created_at', 'asc')
+            ->filters([
+                Filter::make('created_at')
+                    ->label('Creation Date')
+                    ->schema([
+                        DatePicker::make('created_at')
+                            ->label('Select Date'),
+                    ])
+                    ->query(function ($query, $data) {
+                        return $query->when(
+                            $data['created_at'],
+                            fn($query, $date) => $query->whereDate('created_at', $date)
+                        );
+                    }),
+                SelectFilter::make('category_id')
+                    ->label('Select Category')
+                    ->relationship('category', 'name')
+                    ->preload(),
 
             ])
-            ->filters([
-                //
-            ])
+
             ->recordActions([
+                ReplicateAction::make(),
                 EditAction::make(),
+                DeleteAction::make(),
+                Action::make('status')
+                    ->label('Status Change')
+                    ->icon('heroicon-o-check-circle')
+                    ->schema([
+                        Checkbox::make('published')
+                            ->default(fn ($record): bool => $record->published),
+                    ])
+                    ->action(function ($record, $data) {
+                        $record->published = $data['published'];
+                    }),
             ])
+            
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

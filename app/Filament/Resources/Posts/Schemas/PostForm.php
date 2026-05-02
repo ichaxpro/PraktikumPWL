@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Posts\Schemas;
 
+use App\Models\Category;
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
@@ -26,9 +27,9 @@ class PostForm
                     ->schema([
                         Group::make([
                             TextInput::make('title')
-                                ->rules('required , min:3 , max:10'),
-                                // ->minLength(5)
-                                // ->maxLength(255),
+                                ->required()
+                                ->minLength(3)
+                                ->maxLength(10),
                             TextInput::make('slug')
                                 ->rules('required')
                                 ->unique(ignoreRecord: true)
@@ -37,8 +38,9 @@ class PostForm
                                 ]),
                             Select::make('category_id')
                                 ->relationship('category', 'name')
+                                ->options(Category::all()->pluck('name', 'id'))
                                 ->required()
-                                ->preload()
+                                // ->preload()
                                 ->searchable(),
                             ColorPicker::make('color'),
                         ])->columns(2),
